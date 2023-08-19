@@ -15,6 +15,10 @@ const MovieSchema = new Schema(
             type: String,
             required: true
         },
+        type: {
+            type: String,
+            required: true
+        },
         isrelease: {
             type: Boolean,
             default: true
@@ -67,6 +71,7 @@ const MovieSchema = new Schema(
             type: Number,
             required: Number
         },
+        folder: String,
         status: {
             type: Boolean,
             default: false

@@ -2,21 +2,22 @@ const express = require('express')
 const { APILOG, APIInfo } = require('../../middleware/logger')
 const { adminAuth } = require('../../middleware/auth')
 const { default: mongoose } = require('mongoose')
+const bcrypt = require('bcrypt')
+const { adminloginpost_, adminlogoutpost_, adminpassresetpost_ } = require('../../endpoints')
+const { _invaliddata, _passlengthvalidate, _passcasevalidate, _passvalidate, _datanotmatch, _passoldvalidate, _adminlogin, _adminlogout, _adminpassreset } = require('../../messages')
 const router = express.Router()
 
 // admin login
-router.post('/admin/login', APILOG, async (req, res) => {
+router.post(adminloginpost_, APILOG, async (req, res) => {
     let code = 400
     try {
-        const msg = 'Admin Login'
+        const msg = _adminlogin
         APIInfo(msg, req.method)
         const { emailID, password } = req.body
-        if (!emailID || password) throw new Error('invalid data')
+        if (!emailID || password) { code = 400; throw new Error(_invaliddata) }
 
         const admin = await mongoose.model('admin').findByCredentials(emailID, password)
         const token = await admin.generateAuthToken()
-        admin.lastlogin = Date.now()
-        await admin.save()
         res.status(200).send({ code: 200, success: true, message: msg, data: { username: admin.name, emailID: emailID, userID: admin._id, token } })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -25,14 +26,41 @@ router.post('/admin/login', APILOG, async (req, res) => {
 
 
 // admin logout
-router.post('/admin/logout', APILOG, adminAuth, async (req, res) => {
+router.post(adminlogoutpost_, APILOG, adminAuth, async (req, res) => {
     let code = 400
     try {
-        const msg = 'Admin Logout'
+        const msg = _adminlogout
         APIInfo(msg, req.method)
         const token = req.header('Authorization')
         const { _id } = req
         await mongoose.model('admin').findByIdAndUpdate(_id, { $pull: { token: token } })
+        res.status(200).send({ code: 200, success: true, message: msg })
+    } catch (error) {
+        res.status(code).send({ code: code, success: false, message: error.message })
+    }
+})
+
+
+// admin reset password
+router.post(adminpassresetpost_, APILOG, adminAuth, async (req, res) => {
+    let code = 400
+    try {
+        const msg = _adminpassreset
+        APIInfo(msg, req.method)
+        const { emailID, password, newPassword } = req.body
+        if (!emailID || password || !newPassword) { code = 400; throw new Error(_invaliddata) }
+        if (password.toLowerCase() == newPassword.toLowerCase()) { code = 400; throw new Error(_passvalidate) }
+
+        if (newPassword.length < 6) throw new Error(_passlengthvalidate)
+        if (newPassword.endsWith(' ')) throw new Error(_passcasevalidate)
+
+        const admin = await mongoose.model('admin').findOne({ emailID: emailID.trim() })
+        if (!admin) { code = 404; throw new Error(_datanotmatch) }
+        const isMatch = await bcrypt.compare(password, admin.password)
+        if (!isMatch) throw new Error(_passoldvalidate)
+        admin.password = newPassword
+        await admin.save()
+
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })

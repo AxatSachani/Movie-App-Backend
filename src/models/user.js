@@ -1,11 +1,13 @@
 const { Schema, default: mongoose } = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken');
 
 const UserSchema = new Schema(
     {
         name: {
             type: String,
+            trim: true,
             required: true
         },
         emailID: {
@@ -26,12 +28,7 @@ const UserSchema = new Schema(
         },
         password: {
             type: String,
-            required: true,
-            validate(value) {
-                if (value.length < 6) throw new Error('password must be contain atleast 6 characters')
-                if (value.toLowerCase().includes('password')) throw new Error(`Password can not contain ${value}`)
-                if (value.endsWith(' ')) throw new Error(`Password can not end with space (' ') `)
-            }
+            required: true
         },
         token: [String],
         created: Number,
@@ -62,14 +59,14 @@ UserSchema.statics.findByCredentials = async function (emailID, password) {
     if (!isMatch) throw new Error('invalid password..!')
     user.lastlogin = Date.now()
     await user.save()
-    return user //.username, user.emailID, user.role,user._id
+    return { name: user.name, _id: user._id }
 }
 
 // generate token
 UserSchema.methods.generateAuthToken = async function () {
     const secret_key = process.env.UserAuth_SECRETKEY
     const user = this
-    const token = jwt.sign({ id: user.emailID.toString() }, secret_key, { expiresIn: 18000 })
+    const token = jwt.sign({ id: user._id.toString(), emailID: user.emailID.toString(), logintime: Date.now() }, secret_key, { expiresIn: 18000 })
     user.token.push(token)
     await user.save()
     return token

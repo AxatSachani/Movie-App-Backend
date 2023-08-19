@@ -1,6 +1,8 @@
 const { Schema, default: mongoose } = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken');
+
 
 const AdminSchema = new Schema(
     {
@@ -26,12 +28,7 @@ const AdminSchema = new Schema(
         },
         password: {
             type: String,
-            required: true,
-            validate(value) {
-                if (value.length < 6) throw new Error('password must be contain atleast 6 characters')
-                if (value.toLowerCase().includes('password')) throw new Error(`Password can not contain ${value}`)
-                if (value.endsWith(' ')) throw new Error(`Password can not end with space (' ') `)
-            }
+            required: true
         },
         token: [String],
         created: Number,
