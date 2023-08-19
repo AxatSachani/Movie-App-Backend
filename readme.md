@@ -22,7 +22,7 @@ series, including authentication, file upload, and other API features.
 1. Bunny CDN: All movies media like poster, banner images all the media will store on cdn storage
    open cdn media link e.g `https://movieapp.b-cdn.net` + image path which is store in databse.
 2. API Authantication : API Authanticationwith JWT token to secure the API endpoint and use for multiple role access.
-3. Activity Log : Activity logs of actions performed by both users and admini![1692449580114](image/readme/1692449580114.png).
+3. Activity Log : Activity logs of actions performed by both users and admin.
    This feature will be valuable for auditing, troubleshooting, and monitoring user behavior and admin activities.
 
 ## Technologies Used
