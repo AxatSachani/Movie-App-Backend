@@ -5,6 +5,7 @@ const moment = require('moment')
 require('dotenv').config()
 require('./src/database/database')
 require('./src/middleware/case')
+require('./src/middleware/response')
 const route = require('./src/routes')
 
 const app = express()
@@ -20,7 +21,12 @@ app.use((req, res, next) => {
 })
 
 
-// app.use(route)
+app.use(route)
+
+
+app.get('/', async (req, res) => {
+    res.status(200).send({ code: 200, success: true, message: 'server connected' })
+})
 
 const { HOST, PORT } = process.env
 const time = moment(Date.now()).format('hh:mm:ss')

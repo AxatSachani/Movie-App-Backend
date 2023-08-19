@@ -6,6 +6,7 @@ const multer = require('multer')
 const { uploadBanner, uploadPoster } = require('../../middleware/bunny')
 const { _movieupload, _invaliddata, _movieunique, _moviedetails, _movielist, _datanotfound, _movieupdate, _updatekeyvalidate, _moviedelet } = require('../../messages')
 const { moviepost_, movieget_, moviepatch_, moviedelete_ } = require('../../endpoints')
+const { AdminActivity } = require('../../middleware/activity')
 const router = express.Router()
 
 const bunny = multer({
@@ -22,7 +23,7 @@ router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single(
     let code = 400
     try {
         const { description, releaseDate, genre, director, duration, bannerAltText, posterAltText, price, type, status } = req.body
-        const { _id } = req
+        const { _id, emailID } = req
         let { title, discount } = req.body, isrelease = true
         let posterImage = req.file.poster
         let bannerImage = req.file.banner
@@ -64,6 +65,7 @@ router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single(
             folder: folder
         }
         await mongoose.model('movie')(data).save()
+        AdminActivity({ module: 'movie-series', action: 'upload', method: req.method, title: `${title} created`, description: `${title} created with details ${JSON.stringify(data)}`, ip: req.ip, from: _id, emailID })
         res.status(201).send({ code: 201, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -269,6 +271,8 @@ router.patch(moviepatch_, APILOG, adminAuth, bunny.single('poster'), bunny.singl
             movie[key] = req.body[key]
         })
         await movie.save()
+        const { _id, emailID } = req
+        AdminActivity({ module: 'movie-series', action: 'update', method: req.method, title: `${slug.toMovieTitle()} updated`, description: `${slug.toMovieTitle()} update with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -286,6 +290,10 @@ router.delete(moviedelete_, APILOG, adminAuth, async (req, res) => {
         slug = slug.toSlug()
         const movie = await mongoose.model('movie').findOneAndDelete({ slug: slug })
         if (!movie) { code = 404; throw new Error(_datanotfound) }
+
+        const { _id, emailID } = req
+        AdminActivity({ module: 'movie-series', action: 'delete', method: req.method, title: `${slug.toMovieTitle()} deleted`, description: `${slug.toMovieTitle()} delete with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
+
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })

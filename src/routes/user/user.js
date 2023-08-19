@@ -5,6 +5,7 @@ const { default: mongoose } = require('mongoose')
 const bcrypt = require('bcrypt')
 const { usersignuppost_, userloginpost_, userlogoutpost_, userpassresetpost_ } = require('../../endpoints')
 const { _usersignup, _invaliddata, _usersignupemailunique, _usersignin, _usersignout, _userpassreset, _passvalidate, _passlengthvalidate, _passcasevalidate, _datanotmatch, _passoldvalidate } = require('../../messages')
+const { UserActivity } = require('../../middleware/activity')
 const router = express.Router()
 
 
@@ -26,6 +27,9 @@ router.post(usersignuppost_, APILOG, async (req, res) => {
         }
         const user = await mongoose.model('user')(data).save()
         const token = await user.generateAuthToken()
+
+        UserActivity({ module: 'user', action: 'signup', method: req.method, title: `${emailID} signup`, ip: req.ip, from: user._id, emailID })
+
         res.status(200).send({ code: 200, success: true, message: msg, data: { username: user.name, emailID: emailID, userID: user._id, token } })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -42,6 +46,8 @@ router.post(userloginpost_, APILOG, async (req, res) => {
         if (!emailID || !password) { code = 400; throw new Error(_invaliddata) }
         const user = await mongoose.model('user').findByCredentials(emailID, password)
         const token = await user.generateAuthToken()
+
+        UserActivity({ module: 'user', action: 'login', method: req.method, title: `${emailID} login`, ip: req.ip, from: user._id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg, data: { username: user.name, emailID: emailID, userID: user._id, token } })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -55,8 +61,10 @@ router.post(userlogoutpost_, APILOG, userAuth, async (req, res) => {
         const msg = _usersignout
         APIInfo(msg, req.method)
         const token = req.header('Authorization')
-        const { _id } = req
+        const { _id, emailID } = req
         await mongoose.model('user').findByIdAndUpdate(_id, { $pull: { token: token } })
+
+        UserActivity({ module: 'user', action: 'logout', method: req.method, title: `${emailID} logout`, ip: req.ip, from: user._id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -84,7 +92,7 @@ router.post(userpassresetpost_, APILOG, userAuth, async (req, res) => {
         if (!isMatch) throw new Error(_passoldvalidate)
         user.password = newPassword
         await user.save()
-
+        UserActivity({ module: 'user', action: 'reset password', method: req.method, title: `${emailID} reset password`, ip: req.ip, from: user._id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
