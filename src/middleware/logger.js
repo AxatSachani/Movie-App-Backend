@@ -12,13 +12,14 @@ const LOG = createLogger({
 const APILOG = (req, res, next) => {
     const { ip, url } = req
     LOG.info({ api: url, time: moment(Date.now()).format('DD/MM/YYYY h:mm:ss A'), timestamp: Date.now(), ip: ip.substring(ip.lastIndexOf(':') + 1, ip.length) })
+    next()
 }
-const APIInfo = (msg, operation) => {
+const APIInfo = (msg, method) => {
     let color = 'blueBright'
-    if (operation == 'insert') color = 'yellowBright'
-    if (operation == 'read') color = 'greenBright'
-    if (operation == 'update') color = 'cyanBright'
-    if (operation == 'delete') color = 'redBright'
+    if (method.toLowerCase() == 'post') color = 'yellowBright'
+    if (method.toLowerCase() == 'get') color = 'greenBright'
+    if (method.toLowerCase() == 'patch') color = 'cyanBright'
+    if (method.toLowerCase() == 'delete') color = 'redBright'
     console.log(chalk.italic('call :'), chalk[color](msg))
 };
 

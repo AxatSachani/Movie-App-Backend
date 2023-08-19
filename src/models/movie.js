@@ -35,7 +35,7 @@ const MovieSchema = new Schema(
             type: Number,
             required: true
         },
-        addBy: {
+        createdBy: {
             type: ObjectId,
             ref: 'admin'
         },
@@ -66,6 +66,10 @@ const MovieSchema = new Schema(
         finalprice: {
             type: Number,
             required: Number
+        },
+        status: {
+            type: Boolean,
+            default: false
         },
         created: Number,
         updated: Number

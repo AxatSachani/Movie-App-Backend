@@ -62,14 +62,14 @@ AdminSchema.statics.findByCredentials = async function (emailID, password) {
     if (!isMatch) throw new Error('invalid password..!')
     admin.lastlogin = Date.now()
     await admin.save()
-    return admin //.username, admin.emailID, admin.role,admin._id
+    return { name: admin.name, _id: admin._id }
 }
 
 // generate token
 AdminSchema.methods.generateAuthToken = async function () {
     const secret_key = process.env.AdminAuth_SECRETKEY
     const admin = this
-    const token = jwt.sign({ id: admin.emailID.toString() }, secret_key, { expiresIn: 18000 })
+    const token = jwt.sign({ id: admin._id.toString(), emailID: admin.emailID.toString(), logintime: Date.now() }, secret_key, { expiresIn: 18000 })
     admin.token.push(token)
     await admin.save()
     return token
