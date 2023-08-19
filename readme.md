@@ -10,9 +10,10 @@ series, including authentication, file upload, and other API features.
 - Admin can create, update, read and delete the movies.
 - User can read and sort, filter and search movie by title, genre.
 
-## Installationlone the repository: `git https://github.com/AxatSachani/Movie-App-Backend.git`
+## Installation
 
-1. Install dependencies: `npm install` (or any other package manager you're using)
+1. Clone the repository: `git https://github.com/AxatSachani/Movie-App-Backend.git`
+2. Install dependencies: `npm install` (or any other package manager you're using)
 3. Start the application: `npm start`
 4. Connect with your local mongodb or create a cluster from [MongoDB](https://account.mongodb.com/account/login) and update in database file
 
