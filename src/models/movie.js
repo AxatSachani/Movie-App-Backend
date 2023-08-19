@@ -19,10 +19,6 @@ const MovieSchema = new Schema(
             type: String,
             required: true
         },
-        isrelease: {
-            type: Boolean,
-            default: true
-        },
         releaseDate: {
             type: Number,
             required: true

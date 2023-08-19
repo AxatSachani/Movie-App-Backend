@@ -3,7 +3,6 @@ const axios = require('axios')
 const bunnyStorage = process.env.BUNNY_STORAGENAME
 const bunnykey = process.env.BUNNY_STORAGEKEY
 
-
 const uploadPoster = (folder, file) => {
     axios({
         method: 'PUT',
@@ -13,6 +12,7 @@ const uploadPoster = (folder, file) => {
         },
         data: file
     }).catch(err => {
+        console.log(err);
     })
 }
 
@@ -26,6 +26,7 @@ const uploadBanner = (folder, file) => {
         },
         data: file
     }).catch(err => {
+        console.log(err);
     })
 }
 

@@ -4,7 +4,7 @@ const { adminAuth } = require('../../middleware/auth')
 const { default: mongoose } = require('mongoose')
 const multer = require('multer')
 const { uploadBanner, uploadPoster } = require('../../middleware/bunny')
-const { _movieupload, _invaliddata, _movieunique, _moviedetails, _movielist, _datanotfound, _movieupdate, _updatekeyvalidate, _moviedelet } = require('../../messages')
+const { _movieupload, _invaliddata, _movieunique, _moviedetails, _movielist, _datanotfound, _movieupdate, _updatekeyvalidate, _moviedelet, _updatebannervalidate, _updatepostervalidate } = require('../../messages')
 const { moviepost_, movieget_, moviepatch_, moviedelete_ } = require('../../endpoints')
 const { AdminActivity } = require('../../middleware/activity')
 const router = express.Router()
@@ -19,14 +19,16 @@ const bunny = multer({
 })
 
 // movie create 
-router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single('banner'), async (req, res) => {
+router.post(moviepost_, APILOG, adminAuth, bunny.fields([{ name: 'poster', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), async (req, res) => {
     let code = 400
     try {
-        const { description, releaseDate, genre, director, duration, bannerAltText, posterAltText, price, type, status } = req.body
+        const { description, releaseDate, genre, director, duration, bannerAltText, posterAltText, type, status } = req.body
         const { _id, emailID } = req
-        let { title, discount } = req.body, isrelease = true
-        let posterImage = req.file.poster
-        let bannerImage = req.file.banner
+        let { title, discount, price } = req.body
+        let posterImage = req.files?.poster
+        let bannerImage = req.files?.banner
+        price = (price * 1)
+        discount = (discount * 1)
         if (!title || !description || !releaseDate || genre?.length == 0 || director?.length == 0 || !duration || !bannerAltText || !posterAltText || !price || typeof price != 'number' || !type || !posterImage || !bannerImage || (discount && typeof discount != 'number')) { code = 400; throw new Error(_invaliddata) }
         title = title.toMovieTitle()
         slug = title.toSlug()
@@ -36,9 +38,9 @@ router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single(
         if (checkDuplicate) { code = 400; throw new Error(_movieunique(title)) }
         let finalprice = price
         if (discount > 0) finalprice = price - discount
-        const currentTime = new Date().setHours(23, 59, 59, 999)
-        if (releaseDate > currentTime) isrelease = false
-        const folder = title
+        const folder = slug
+        posterImage = posterImage[0]?.buffer
+        bannerImage = bannerImage[0]?.buffer
         uploadPoster(folder, posterImage.buffer)
         uploadBanner(folder, bannerImage.buffer)
         posterImage = '/' + folder + '/poster.webp'
@@ -46,8 +48,8 @@ router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single(
 
         const data = {
             title,
+            slug,
             description,
-            isrelease,
             releaseDate,
             genre,
             director,
@@ -65,7 +67,7 @@ router.post(moviepost_, APILOG, adminAuth, bunny.single('poster'), bunny.single(
             folder: folder
         }
         await mongoose.model('movie')(data).save()
-        AdminActivity({ module: 'movie-series', action: 'upload', method: req.method, title: `${title} created`, description: `${title} created with details ${JSON.stringify(data)}`, ip: req.ip, from: _id, emailID })
+        await AdminActivity({ module: 'movie-series', action: 'upload', method: req.method, title: `${title} created`, description: `${title} created with details ${JSON.stringify(data)}`, ip: req.ip, from: _id, emailID })
         res.status(201).send({ code: 201, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -97,8 +99,9 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                         foreignField: '_id',
                         pipeline: [{
                             $project: {
+                                _id: 0,
                                 name: 1,
-                                emailid: 1
+                                emailID: 1
                             }
                         }],
                         as: 'createdData'
@@ -112,7 +115,7 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                         title: 1,
                         slug: 1,
                         description: 1,
-                        isrelease: 1,
+                        isrelease: { $gt: [Date.now(), '$releaseDate'] },
                         releaseDate: 1,
                         genre: 1,
                         director: 1,
@@ -132,6 +135,7 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                     }
                 }
             ])
+            count = movie.length
             if (!movie[0]) { code = 404; throw new Error(_datanotfound) }
         } else {
             msg = _movielist
@@ -142,7 +146,7 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                 searchSlug = new RegExp(searchSlug + '{1}', 'ig')
                 searchTitle = new RegExp(searchTitle + '{1}', 'ig')
                 const searchGenre = new RegExp(search + '{1}', 'ig')
-                count = await mongoose.model('movie').countDocuments({ $and: [{ status: true }, { $or: [{ slug: searchSlug }, { title: searchTitle }, { genre: searchGenre }] }] })
+                count = await mongoose.model('movie').countDocuments({ $and: [{ $or: [{ slug: searchSlug }, { title: searchTitle }, { genre: searchGenre }] }] })
                 if (count > 0) {
                     movie = await mongoose.model('movie').aggregate([
                         {
@@ -152,7 +156,7 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                             $skip: skip
                         },
                         {
-                            $match: { $and: [{ status: true }, { $or: [{ slug: searchSlug }, { title: searchTitle }, { genre: searchGenre }] }] }
+                            $match: { $and: [{ $or: [{ slug: searchSlug }, { title: searchTitle }, { genre: searchGenre }] }] }
                         },
                         {
                             $project: {
@@ -165,12 +169,13 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                                 discount: 1,
                                 finalprice: 1,
                                 type: 1,
-                                isrelease: 1,
+                                isrelease: { $gt: [Date.now(), '$releaseDate'] },
                                 releaseDate: 1,
                                 status: 1,
                             }
                         }
                     ])
+                    if (movie.length == 0) count = 0
                 }
             } else {
                 count = await mongoose.model('movie').countDocuments({ status: true })
@@ -199,12 +204,13 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
                                 discount: 1,
                                 type: 1,
                                 finalprice: 1,
-                                isrelease: 1,
+                                isrelease: { $gt: [Date.now(), '$releaseDate'] },
                                 releaseDate: 1,
                                 status: 1,
                             }
                         }
                     ])
+                    if (movie.length == 0) count = 0
                 }
             }
         }
@@ -215,7 +221,7 @@ router.get(movieget_, APILOG, adminAuth, async (req, res) => {
 })
 
 // movie update
-router.patch(moviepatch_, APILOG, adminAuth, bunny.single('poster'), bunny.single('banner'), async (req, res) => {
+router.patch(moviepatch_, APILOG, adminAuth, bunny.fields([{ name: 'poster', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), async (req, res) => {
     let code = 400
     try {
         const msg = _movieupdate
@@ -250,21 +256,18 @@ router.patch(moviepatch_, APILOG, adminAuth, bunny.single('poster'), bunny.singl
             movie.title = title
             movie.slug = _slug
         }
-        if (keys.includes('isposter') && req.body['isposter'] == true) {
-            const posterImage = req.file.poster
-            uploadPoster(movie.folder, posterImage.buffer)
+        if (keys.includes('isposter') && req.body['isposter'] == 'true') {
+            const posterImage = req.files?.poster
+            if (!posterImage) { code = 400; throw new Error(_updatepostervalidate) }
+            uploadPoster(movie.folder, posterImage[0].buffer)
         }
-        if (keys.includes('isbanner') && req.body['isbanner'] == true) {
-            const bannerImage = req.file.banner
-            uploadBanner(movie.folder, bannerImage.buffer)
+        if (keys.includes('isbanner') && req.body['isbanner'] == 'true') {
+            const bannerImage = req.files?.banner
+            if (!bannerImage) { code = 400; throw new Error(_updatebannervalidate) }
+            uploadBanner(movie.folder, bannerImage[0].buffer)
         }
         keys.forEach(key => {
             if (key == 'title' || key == 'isposter' || key == 'isbanner') return
-            if (key == 'releaseDate') {
-                const currentTime = new Date().setHours(23, 59, 59, 999)
-                if (releaseDate > currentTime) movie['isrelease'] = false
-                else movie['isrelease'] = true
-            }
             if (key == 'price') {
                 if (req.body['discount']) movie['finalprice'] = price - discount
             }
@@ -272,7 +275,7 @@ router.patch(moviepatch_, APILOG, adminAuth, bunny.single('poster'), bunny.singl
         })
         await movie.save()
         const { _id, emailID } = req
-        AdminActivity({ module: 'movie-series', action: 'update', method: req.method, title: `${slug.toMovieTitle()} updated`, description: `${slug.toMovieTitle()} update with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
+        await AdminActivity({ module: 'movie-series', action: 'update', method: req.method, title: `${slug.toMovieTitle()} updated`, description: `${slug.toMovieTitle()} update with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
@@ -292,7 +295,7 @@ router.delete(moviedelete_, APILOG, adminAuth, async (req, res) => {
         if (!movie) { code = 404; throw new Error(_datanotfound) }
 
         const { _id, emailID } = req
-        AdminActivity({ module: 'movie-series', action: 'delete', method: req.method, title: `${slug.toMovieTitle()} deleted`, description: `${slug.toMovieTitle()} delete with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
+        await AdminActivity({ module: 'movie-series', action: 'delete', method: req.method, title: `${slug.toMovieTitle()} deleted`, description: `${slug.toMovieTitle()} delete with details ${JSON.stringify(movie)}`, ip: req.ip, from: _id, emailID })
 
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {

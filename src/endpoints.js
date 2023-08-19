@@ -3,10 +3,10 @@ module.exports = {
     adminloginpost_: '/admin/login',
     adminlogoutpost_: '/admin/logout',
     adminpassresetpost_: '/admin/password/reset',
-    moviepost_: 'admin/movie',
-    movieget_: 'admin/movie/:slug?',
-    moviepatch_: 'admin/movie/:slug',
-    moviedelete_: 'admin/movie/:slug',
+    moviepost_: '/admin/movie',
+    movieget_: '/admin/movie/:slug?',
+    moviepatch_: '/admin/movie/:slug',
+    moviedelete_: '/admin/movie/:slug',
 
 
 
@@ -18,5 +18,7 @@ module.exports = {
     userloginpost_: '/user/login',
     userlogoutpost_: '/user/logout',
     userpassresetpost_: '/user/password/reset',
+    usermovieget_: '/user/movie/:slug?',
+
 
 }

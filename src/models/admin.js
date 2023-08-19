@@ -1,10 +1,11 @@
-const { Schema, default: mongoose } = require('mongoose')
+const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
+const { _adminpassnotmatch, _adminnotfound } = require('../messages');
 
 
-const AdminSchema = new Schema(
+const AdminSchema = new mongoose.Schema(
     {
         name: {
             type: String,
@@ -40,8 +41,7 @@ const AdminSchema = new Schema(
     },
     versionKey: false,
     timestamps: { currentTime: () => Date.now(), createdAt: 'created', updatedAt: 'lastlogin' }
-})
-
+});
 
 
 // convert password into hash format
@@ -51,15 +51,16 @@ AdminSchema.pre('save', async function (next) {
     next()
 })
 
+
 // verify credential for login
 AdminSchema.statics.findByCredentials = async function (emailID, password) {
-    const admin = await mongoose.model('admin').findOne({ emailID })
-    if (!admin) throw new Error('admin not found..!')
+    const admin = await Admin.findOne({ emailID })
+    if (!admin) throw new Error(_adminnotfound)
     const isMatch = await bcrypt.compare(password, admin.password)
-    if (!isMatch) throw new Error('invalid password..!')
+    if (!isMatch) throw new Error(_adminpassnotmatch)
     admin.lastlogin = Date.now()
     await admin.save()
-    return { name: admin.name, _id: admin._id }
+    return admin
 }
 
 // generate token
@@ -76,4 +77,4 @@ AdminSchema.methods.generateAuthToken = async function () {
 const Admin = mongoose.model('admin', AdminSchema)
 module.exports = {
     Admin
-}
+};

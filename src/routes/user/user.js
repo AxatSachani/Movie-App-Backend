@@ -64,13 +64,12 @@ router.post(userlogoutpost_, APILOG, userAuth, async (req, res) => {
         const { _id, emailID } = req
         await mongoose.model('user').findByIdAndUpdate(_id, { $pull: { token: token } })
 
-        UserActivity({ module: 'user', action: 'logout', method: req.method, title: `${emailID} logout`, ip: req.ip, from: user._id, emailID })
+        UserActivity({ module: 'user', action: 'logout', method: req.method, title: `${emailID} logout`, ip: req.ip, from: _id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })
     }
 })
-
 
 
 // user reset password
@@ -79,20 +78,21 @@ router.post(userpassresetpost_, APILOG, userAuth, async (req, res) => {
     try {
         const msg = _userpassreset
         APIInfo(msg, req.method)
-        const { emailID, password, newPassword } = req.body
-        if (!emailID || password || !newPassword) { code = 400; throw new Error(_invaliddata) }
-        if (password.toLowerCase() == newPassword.toLowerCase()) { code = 400; throw new Error(_passvalidate) }
-
-        if (newPassword.length < 6) throw new Error(_passlengthvalidate)
-        if (newPassword.endsWith(' ')) throw new Error(_passcasevalidate)
+        const { password, newPassword } = req.body
+        const { _id, emailID } = req
+        if (!emailID || !password || !newPassword) { code = 400; throw new Error(_invaliddata) }
 
         const user = await mongoose.model('user').findOne({ emailID: emailID.trim() })
         if (!user) { code = 404; throw new Error(_datanotmatch) }
         const isMatch = await bcrypt.compare(password, user.password)
         if (!isMatch) throw new Error(_passoldvalidate)
+        if (password.toString().toLowerCase() == newPassword.toString().toLowerCase()) { code = 400; throw new Error(_passvalidate) }
+
+        if (newPassword.toString().length < 6) throw new Error(_passlengthvalidate)
+        if (newPassword.toString().endsWith(' ')) throw new Error(_passcasevalidate)
         user.password = newPassword
         await user.save()
-        UserActivity({ module: 'user', action: 'reset password', method: req.method, title: `${emailID} reset password`, ip: req.ip, from: user._id, emailID })
+        UserActivity({ module: 'user', action: 'reset password', method: req.method, title: `${emailID} reset password`, ip: req.ip, from: _id, emailID })
         res.status(200).send({ code: 200, success: true, message: msg })
     } catch (error) {
         res.status(code).send({ code: code, success: false, message: error.message })

@@ -19,14 +19,24 @@ module.exports = {
     _movielist: 'Movie List',
     _movieupdate: 'Data Updated Successfully',
     _updatekeyvalidate: 'invalid Update!',
+    _updatepostervalidate: 'invalid Update, Poster Image Not Found!',
+    _updatebannervalidate: 'invalid Update, Banner Image Not Found!',
     _moviedelet: 'Deleted Successfully',
+    _adminnotfound: 'Admin Not Found!',
+    _adminpassnotmatch: 'Invalid Password!',
 
 
 
     //---------------------------------------------------------- user message ----------------------------------------------------------//
-    _usersignup: 'Registration Successfully Done',
+    _usersignup: 'Registration Complate',
     _usersignupemailunique: 'EmailID Already Eegistered!',
-    _usersignin: 'Login Successfully',
-    _usersignout: 'Logout Successfully',
+    _usersignin: 'Login Successful',
+    _usersignout: 'Logout Successful',
     _userpassreset: 'Password Reset Successfully',
+    _usernotfound: 'User Not Found!',
+    _userpassnotmatch: 'Invalid Password!',
+    _usermoviedetails: 'Full Details',
+    _usermovielist: 'Movie List',
+
+
 }

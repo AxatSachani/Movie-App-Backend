@@ -2,6 +2,7 @@ const { Schema, default: mongoose } = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
+const { _usernotfound, _userpassnotmatch } = require('../messages');
 
 const UserSchema = new Schema(
     {
@@ -54,12 +55,13 @@ UserSchema.pre('save', async function (next) {
 // verify credential for login
 UserSchema.statics.findByCredentials = async function (emailID, password) {
     const user = await mongoose.model('user').findOne({ emailID })
-    if (!user) throw new Error('user not found..!')
+    if (!user) throw new Error(_usernotfound)
+    password = password.toString()
     const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) throw new Error('invalid password..!')
+    if (!isMatch) throw new Error(_userpassnotmatch)
     user.lastlogin = Date.now()
     await user.save()
-    return { name: user.name, _id: user._id }
+    return user
 }
 
 // generate token
