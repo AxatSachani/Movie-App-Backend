@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 })
 
 
-app.use(route)
+// app.use(route)
 
 const { HOST, PORT } = process.env
 const time = moment(Date.now()).format('hh:mm:ss')
